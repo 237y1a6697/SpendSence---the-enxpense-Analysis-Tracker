@@ -1,0 +1,53 @@
+/* Specific styles for Add Transaction Modal */
+/* It inherits base modal-overlay and modal-container styles from BudgetModal.css or common layout */
+
+.modal-form-group {
+    margin-bottom: 24px;
+}
+
+.category-selector {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.category-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.category-option:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.category-option.selected {
+    background: rgba(236, 72, 153, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 15px rgba(236, 72, 153, 0.15);
+}
+
+.cat-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1a1a2e;
+    flex-shrink: 0;
+}
+
+.category-option span {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-main);
+}
