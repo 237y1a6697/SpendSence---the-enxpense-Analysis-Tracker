@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingBag, Utensils, Car, MoreHorizontal } from 'lucide-react';
+import { X, ShoppingBag, Utensils, Car, MoreHorizontal, FileText } from 'lucide-react';
+import { autoCategorize } from '../utils/categorize';
 import './Modals.css';
 import './AddTransactionModal.css';
 
 const AddTransactionModal = ({ isOpen, onClose, onSave }) => {
     const [amount, setAmount] = useState('');
+    const [description, setDescription] = useState('');
     const [category, setCategory] = useState('Shopping');
     const [icon, setIcon] = useState('shopping-bag');
 
@@ -16,17 +18,29 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }) => {
         { name: 'Other', icon: 'more-horizontal', lucide: <MoreHorizontal size={20} />, color: '#cbd5e1' },
     ];
 
+    const handleDescriptionChange = (e) => {
+        const val = e.target.value;
+        setDescription(val);
+        const auto = autoCategorize(val);
+        if (auto.category !== 'Miscellaneous') {
+            setCategory(auto.category);
+            setIcon(auto.icon);
+        }
+    };
+
     const handleSave = () => {
         if (amount && !isNaN(amount)) {
             onSave({
-                id: Date.now(),
                 category,
+                description: description || 'No Description',
                 amount: parseFloat(amount),
                 icon,
                 date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+                type: 'expense',
                 status: 'Completed'
             });
             setAmount('');
+            setDescription('');
             onClose();
         }
     };
@@ -57,6 +71,20 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }) => {
                         </div>
 
                         <div className="modal-body">
+                            <div className="modal-form-group">
+                                <label className="modal-label">Description</label>
+                                <div className="modal-input-group">
+                                    <FileText size={18} className="input-icon-left" />
+                                    <input
+                                        type="text"
+                                        className="modal-input small"
+                                        value={description}
+                                        onChange={handleDescriptionChange}
+                                        placeholder="What was this for?"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="modal-form-group">
                                 <label className="modal-label">Amount</label>
                                 <div className="modal-input-group">

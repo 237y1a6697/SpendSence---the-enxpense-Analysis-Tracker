@@ -2,55 +2,89 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { ShoppingBag, Utensils, Car, MoreHorizontal, Bell, Home, Clock, User, Plus, Settings, Wallet, Search, Sun, Moon, TrendingUp, Shield } from 'lucide-react';
-import { cloudService } from '../CloudService';
+import { ShoppingBag, Utensils, Car, MoreHorizontal, Bell, Home, Clock, User, Plus, Settings, Wallet, Search, Sun, Moon, TrendingUp, Shield, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { subscribeToTransactions, addTransaction } from '../services/db';
 import Analytics from './Analytics';
 import BudgetModal from './BudgetModal';
 import AddTransactionModal from './AddTransactionModal';
+import CsvUploadModal from './CsvUploadModal';
+import AiAssistant from './AiAssistant';
 import SecurityModal from './SecurityModal';
+import TransactionDetailModal from './TransactionDetailModal';
 import './Dashboard.css';
 
 const Dashboard = ({ initialSection = 'dashboard' }) => {
     const navigate = useNavigate();
-    const [budget, setBudget] = useState({ total: 50000, spent: 35000, currency: '₹' });
+    const { currentUser, logout } = useAuth();
+    const [budget, setBudget] = useState({ total: 50000, spent: 0, currency: '₹' });
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isDark, setIsDark] = useState(true);
     const [activeNav, setActiveNav] = useState(initialSection);
     const [showBudgetModal, setShowBudgetModal] = useState(false);
     const [showTxModal, setShowTxModal] = useState(false);
+    const [showCsvModal, setShowCsvModal] = useState(false);
     const [showSecurityModal, setShowSecurityModal] = useState(false);
+    const [selectedTxForDetail, setSelectedTxForDetail] = useState(null);
+    const [showTxDetailModal, setShowTxDetailModal] = useState(false);
 
     useEffect(() => {
-        const fetchData = async () => {
-            const b = await cloudService.getBudget();
-            const t = await cloudService.getTransactions();
-            setBudget(b);
-            setTransactions(t);
+        if (!currentUser) return;
+
+        // Set up real-time listener for transactions
+        const unsubscribe = subscribeToTransactions(currentUser.uid, (data) => {
+            setTransactions(data);
+            
+            // Calculate total spent from transactions
+            const totalSpent = data
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+            
+            setBudget(prev => ({ ...prev, spent: totalSpent }));
             setLoading(false);
-        };
-        fetchData();
-    }, []);
+        });
+
+        return () => unsubscribe();
+    }, [currentUser]);
 
     useEffect(() => {
         setActiveNav(initialSection);
     }, [initialSection]);
 
-    const percentage = Math.round((budget.spent / budget.total) * 100);
+    const percentage = budget.total > 0 ? Math.round((budget.spent / budget.total) * 100) : 0;
     const pieData = [
         { name: 'Spent', value: budget.spent },
-        { name: 'Remaining', value: budget.total - budget.spent },
+        { name: 'Remaining', value: Math.max(0, budget.total - budget.spent) },
     ];
 
-    const trendData = [
-        { name: 'Mon', amount: 4000 },
-        { name: 'Tue', amount: 3000 },
-        { name: 'Wed', amount: 2000 },
-        { name: 'Thu', amount: 2780 },
-        { name: 'Fri', amount: 1890 },
-        { name: 'Sat', amount: 2390 },
-        { name: 'Sun', amount: 3490 },
-    ];
+    const [selectedPeriod, setSelectedPeriod] = useState('This Week');
+
+    const getTrendData = (period) => {
+        // In a real app, this would be computed from 'transactions' state
+        // For now, keeping the mock logic but making it slightly dynamic
+        switch (period) {
+            case 'This Month':
+                return [
+                    { name: 'Week 1', amount: 12000 },
+                    { name: 'Week 2', amount: 15000 },
+                    { name: 'Week 3', amount: 10000 },
+                    { name: 'Week 4', amount: budget.spent > 37000 ? budget.spent - 37000 : 8000 },
+                ];
+            default: // Simplified for brevity
+                return [
+                    { name: 'Mon', amount: 4000 },
+                    { name: 'Tue', amount: 3000 },
+                    { name: 'Wed', amount: 2000 },
+                    { name: 'Thu', amount: 2780 },
+                    { name: 'Fri', amount: 1890 },
+                    { name: 'Sat', amount: 2390 },
+                    { name: 'Sun', amount: 3490 },
+                ];
+        }
+    };
+
+    const trendData = getTrendData(selectedPeriod);
 
     const getIcon = (name) => {
         switch (name) {
@@ -75,19 +109,26 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
     }
 
     const handleSaveBudget = (newTotal) => {
-        const updated = { ...budget, total: newTotal };
-        setBudget(updated);
-        cloudService.updateBudget(updated);
+        setBudget(prev => ({ ...prev, total: newTotal }));
+        // Note: In Phase 2, we should also save budget to Firestore
     }
 
-    const handleSaveTransaction = (newTx) => {
-        const updatedTxs = [newTx, ...transactions];
-        setTransactions(updatedTxs);
-        const newSpent = budget.spent + newTx.amount;
-        const updatedBudget = { ...budget, spent: newSpent };
-        setBudget(updatedBudget);
-        cloudService.updateBudget(updatedBudget);
-        cloudService.addTransaction(newTx);
+    const handleSaveTransaction = async (newTx) => {
+        try {
+            await addTransaction(currentUser.uid, newTx);
+            // State updates automatically via onSnapshot listener
+        } catch (error) {
+            console.error("Failed to save transaction:", error);
+        }
+    }
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
     }
 
     const toggleTheme = () => {
@@ -107,7 +148,7 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
         navigate(routes[navItem]);
     }
 
-    if (loading) return <div className="loading">Loading Cloud Data...</div>;
+    if (loading) return <div className="loading center-flex" style={{height: '100vh'}}>Loading Financial Data...</div>;
 
     return (
         <div className="desktop-layout">
@@ -152,13 +193,20 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <div className="user-mini" onClick={() => handleNavClick('profile')} style={{ cursor: 'pointer' }}>
-                        <img src="https://ui-avatars.com/api/?name=User&background=0D8ABC&color=fff" alt="User" className="avatar-sm" />
-                        <div className="user-details-mini">
-                            <span>User</span>
+                    <div className="user-mini">
+                        <img 
+                            src={currentUser?.photoURL || `https://ui-avatars.com/api/?name=${currentUser?.email}&background=0D8ABC&color=fff`} 
+                            alt="User" 
+                            className="avatar-sm" 
+                        />
+                        <div className="user-details-mini" style={{maxWidth: '120px', overflow: 'hidden'}}>
+                            <span style={{textOverflow: 'ellipsis', overflow: 'hidden'}}>{currentUser?.displayName || currentUser?.email?.split('@')[0]}</span>
                             <span className="sub">Free Plan</span>
                         </div>
                     </div>
+                    <button className="nav-item logout-btn" onClick={handleLogout} style={{marginTop: '10px', width: '100%', border: 'none', background: 'transparent', textAlign: 'left'}}>
+                        <LogOut size={20} /> Logout
+                    </button>
                 </div>
             </aside>
 
@@ -174,9 +222,9 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
                         <button className="icon-btn-header" onClick={toggleTheme} title="Toggle Theme">
                             {isDark ? <Sun size={20} /> : <Moon size={20} />}
                         </button>
-                        <button className="icon-btn-header"><Bell size={20} /></button>
+                        <button className="glass-button btn-sm outline" onClick={() => setShowCsvModal(true)}>Import CSV</button>
                         <button className="glass-button btn-sm outline" onClick={() => setShowTxModal(true)}>+ Transaction</button>
-                        <button className="glass-button btn-sm" onClick={handleBudgetClick}>+ Add Budget</button>
+                        <button className="glass-button btn-sm" onClick={handleBudgetClick}>+ Set Budget</button>
                     </div>
                 </header>
 
@@ -188,15 +236,21 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
                         percentage={percentage}
                         pieData={pieData}
                         trendData={trendData}
+                        selectedPeriod={selectedPeriod}
+                        onPeriodChange={setSelectedPeriod}
                         getIcon={getIcon}
                         getIconColor={getIconColor}
                         onViewAll={() => handleNavClick('history')}
+                        onTxClick={(tx) => {
+                            setSelectedTxForDetail(tx);
+                            setShowTxDetailModal(true);
+                        }}
                     />
                 )}
 
                 {activeNav === 'history' && <HistoryPage transactions={transactions} budget={budget} getIcon={getIcon} getIconColor={getIconColor} />}
                 {activeNav === 'analytics' && <Analytics />}
-                {activeNav === 'profile' && <ProfilePage />}
+                {activeNav === 'profile' && <ProfilePage user={currentUser} />}
                 {activeNav === 'settings' && <SettingsPage isDark={isDark} toggleTheme={toggleTheme} onManageSecurity={() => setShowSecurityModal(true)} />}
             </main>
 
@@ -213,16 +267,36 @@ const Dashboard = ({ initialSection = 'dashboard' }) => {
                 onSave={handleSaveTransaction}
             />
 
+            <CsvUploadModal
+                isOpen={showCsvModal}
+                onClose={() => setShowCsvModal(false)}
+            />
+
             <SecurityModal
                 isOpen={showSecurityModal}
                 onClose={() => setShowSecurityModal(false)}
             />
+
+            <TransactionDetailModal
+                isOpen={showTxDetailModal}
+                onClose={() => setShowTxDetailModal(false)}
+                transaction={selectedTxForDetail}
+                getIcon={getIcon}
+                getIconColor={getIconColor}
+                currency={budget.currency}
+            />
+
+            <AiAssistant transactions={transactions} />
         </div>
     );
 };
 
 // Dashboard Content Component
-const DashboardContent = ({ budget, transactions, percentage, pieData, trendData, getIcon, getIconColor, onViewAll }) => (
+const DashboardContent = ({
+    budget, transactions, percentage, pieData, trendData,
+    selectedPeriod, onPeriodChange, getIcon, getIconColor,
+    onViewAll, onTxClick
+}) => (
     <div className="content-grid">
         <div className="stats-row">
             <StatCard label="Total Budget" value={`${budget.currency}${budget.total.toLocaleString()}`} change="+2.5%" color="blue" />
@@ -234,12 +308,16 @@ const DashboardContent = ({ budget, transactions, percentage, pieData, trendData
             <motion.div className="chart-card glass-panel wide" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="card-header">
                     <h3>Spending Trend</h3>
-                    <select className="period-select">
-                        <option>This Week</option>
-                        <option>This Month</option>
-                        <option>Past Year</option>
-                        <option>This Year</option>
-                        <option>Past 5 Years</option>
+                    <select
+                        className="period-select"
+                        value={selectedPeriod}
+                        onChange={(e) => onPeriodChange(e.target.value)}
+                    >
+                        <option value="This Week">This Week</option>
+                        <option value="This Month">This Month</option>
+                        <option value="Past Year">Past Year</option>
+                        <option value="This Year">This Year</option>
+                        <option value="Past 5 Years">Past 5 Years</option>
                     </select>
                 </div>
                 <div style={{ width: '100%', height: 300 }}>
@@ -304,6 +382,8 @@ const DashboardContent = ({ budget, transactions, percentage, pieData, trendData
                 {transactions.map((tx, i) => (
                     <motion.div key={tx.id} className="tx-row-item glass-panel"
                         initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                        onClick={() => onTxClick(tx)}
+                        style={{ cursor: 'pointer' }}
                     >
                         <div className="tx-col-main">
                             <div className="tx-icon-sm" style={{ backgroundColor: getIconColor(tx.icon) }}>{getIcon(tx.icon)}</div>
@@ -348,35 +428,44 @@ const HistoryPage = ({ transactions, budget, getIcon, getIconColor }) => (
 );
 
 // Profile Page
-const ProfilePage = () => (
-    <motion.div className="page-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-        <h2 className="page-title">Profile</h2>
-        <div className="profile-container glass-panel">
-            <div className="profile-header">
-                <img src="https://ui-avatars.com/api/?name=Prashanth+Chowdary&background=0D8ABC&color=fff&size=120" alt="Profile" className="profile-avatar" />
-                <div className="profile-info">
-                    <h3>Prashanth Chowdary</h3>
-                    <p>kavuriprashanthchowdary@gmail.com</p>
-                    <span className="badge-plan">Free Plan</span>
+const ProfilePage = ({ user }) => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+
+    const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
+
+    return (
+        <motion.div className="page-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <h2 className="page-title">Profile</h2>
+            <div className="profile-container glass-panel">
+                <div className="profile-header">
+                    <img src={user?.photoURL || `https://ui-avatars.com/api/?name=${user?.email}&background=0D8ABC&color=fff&size=120`} alt="Profile" className="profile-avatar" />
+                    <div className="profile-info">
+                        <h3>{user?.displayName || 'User'}</h3>
+                        <p>{user?.email}</p>
+                        <span className="badge-plan">Free Plan</span>
+                    </div>
+                </div>
+                <div className="profile-details">
+                    <div className="detail-item">
+                        <span className="detail-label">Member Since</span>
+                        <span className="detail-value">{user?.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div className="detail-item">
+                        <span className="detail-label">Status</span>
+                        <span className="detail-value">{user?.emailVerified ? 'Verified' : 'Unverified'}</span>
+                    </div>
+                </div>
+                <div style={{marginTop: '2rem', display: 'flex', gap: '1rem'}}>
+                    <button className="glass-button btn-sm outline" onClick={handleLogout}>Sign Out</button>
                 </div>
             </div>
-            <div className="profile-details">
-                <div className="detail-item">
-                    <span className="detail-label">Member Since</span>
-                    <span className="detail-value">January 2024</span>
-                </div>
-                <div className="detail-item">
-                    <span className="detail-label">Total Transactions</span>
-                    <span className="detail-value">245</span>
-                </div>
-                <div className="detail-item">
-                    <span className="detail-label">Account Status</span>
-                    <span className="detail-value">Active</span>
-                </div>
-            </div>
-        </div>
-    </motion.div>
-);
+        </motion.div>
+    );
+};
 
 // Settings Page
 const SettingsPage = ({ isDark, toggleTheme, onManageSecurity }) => (

@@ -9,7 +9,7 @@ const LandingPage = () => {
     const [isDark, setIsDark] = useState(true);
 
     const handleStart = () => {
-        navigate('/dashboard');
+        navigate('/login');
     };
 
     const toggleTheme = () => {
