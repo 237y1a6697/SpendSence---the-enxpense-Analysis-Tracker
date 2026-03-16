@@ -153,7 +153,7 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
             style={{ maxWidth: '480px' }}
           >
             <div className="modal-header">
-              <h3>Import Transactions</h3>
+              <h3>Import Transactions (Bulk Mode)</h3>
               <button className="modal-close" onClick={onClose}>
                 <X size={20} />
               </button>
