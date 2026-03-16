@@ -34,52 +34,85 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
   };
 
   const handleUpload = () => {
-    if (!file) return;
+    if (!file) {
+      setError('Please select a CSV file first.');
+      setStatus('error');
+      return;
+    }
+    if (!currentUser) {
+      setError('You must be logged in to upload files.');
+      setStatus('error');
+      return;
+    }
 
+    console.log("Starting CSV upload for file:", file.name);
     setStatus('parsing');
+    setError('');
+
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
+        console.log("CSV Parsing results:", results);
+        
+        if (results.errors && results.errors.length > 0) {
+          console.warn("CSV Parsing had errors:", results.errors);
+        }
+
         try {
           const data = results.data;
+          if (!data || data.length === 0) {
+            setError('The CSV file appears to be empty or formatted incorrectly.');
+            setStatus('error');
+            return;
+          }
+
           setStatus('uploading');
           setParsedCount(data.length);
 
-          // Map CSV rows to transaction objects
-          // Expected format: Date, Description, Amount
-          const uploadPromises = data.map(row => {
-            // Support both 'Amount' and 'amount' headers
-            const rawAmount = row.Amount || row.amount || "0";
-            // Remove currency symbols, commas, and handle negative numbers properly
+          const uploadPromises = data.map((row, index) => {
+            const keys = Object.keys(row);
+            const findKey = (possibleNames) => 
+               keys.find(k => k && possibleNames.includes(k.trim().toLowerCase()));
+
+            const amountKey = findKey(['amount', 'amt', 'value', 'transaction amount', 'amount (inr)']);
+            const descKey = findKey(['description', 'desc', 'narration', 'particulars', 'remarks']);
+            const dateKey = findKey(['date', 'transaction date', 'txn date', 'value date']);
+
+            const rawAmount = amountKey ? row[amountKey] : "0";
             const cleanAmount = String(rawAmount).replace(/[^\d.-]/g, '');
             const amount = parseFloat(cleanAmount);
             
-            const description = row.Description || row.description || 'No Description';
+            const description = descKey ? row[descKey] : 'Imported Transaction';
             const { category, icon } = autoCategorize(description);
-            const dateStr = row.Date || row.date || new Date().toLocaleDateString('en-IN');
+            const dateValue = dateKey ? row[dateKey] : new Date().toLocaleDateString('en-IN');
 
             return addTransaction(currentUser.uid, {
               amount: isNaN(amount) ? 0 : Math.abs(amount),
               category,
               description,
               icon,
-              date: dateStr,
+              date: dateValue,
               type: amount < 0 ? 'expense' : 'income',
               status: 'Completed'
+            }).catch(e => {
+              console.error(`Row ${index} failed:`, e);
+              throw e;
             });
           });
 
           await Promise.all(uploadPromises);
+          console.log(`Successfully uploaded ${data.length} transactions`);
           setStatus('success');
+          
           setTimeout(() => {
             onClose();
             setFile(null);
             setStatus('idle');
           }, 2000);
         } catch (err) {
-          console.error("CSV Upload failed:", err);
-          setError('Failed to upload transactions. Please check the CSV format.');
+          console.error("Full CSV Upload process failed:", err);
+          setError(`Upload failed: ${err.message || 'Firestore connection issue'}`);
           setStatus('error');
         }
       },
@@ -118,12 +151,12 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
 
             <div className="modal-body">
               <div className="upload-area">
-                {status === 'idle' && (
+                {(status === 'idle' || status === 'error') && (
                   <>
                     <div className="upload-icon-wrapper">
-                      <Upload size={40} color="var(--primary)" />
+                      <Upload size={40} color={file ? "#4ade80" : "var(--primary)"} />
                     </div>
-                    <p>Upload your bank statement (.csv)</p>
+                    <p>{file ? `File: ${file.name}` : "Upload your bank statement (.csv)"}</p>
                     <input 
                       type="file" 
                       id="csv-file" 
@@ -131,10 +164,9 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
                       onChange={handleFileChange} 
                       style={{ display: 'none' }} 
                     />
-                    <label htmlFor="csv-file" className="glass-button btn-sm outline">
-                      Select File
+                    <label htmlFor="csv-file" className={`glass-button btn-sm ${file ? 'success' : 'outline'}`}>
+                      {file ? 'Change File' : 'Select File'}
                     </label>
-                    {file && <div className="file-info"><FileText size={16} /> {file.name}</div>}
                   </>
                 )}
 
@@ -153,26 +185,33 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
                 )}
 
                 {status === 'error' && (
-                  <div className="status-container error">
-                    <AlertCircle size={40} color="#ef4444" />
-                    <p>{error}</p>
-                    <button className="glass-button btn-sm outline" onClick={() => setStatus('idle')}>Try Again</button>
+                  <div className="status-container error" style={{ marginTop: '10px', padding: '10px', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ef4444', marginBottom: '8px' }}>
+                        <AlertCircle size={20} />
+                        <span style={{ fontWeight: '500' }}>{error}</span>
+                    </div>
+                    <button className="glass-button btn-sm outline" onClick={() => { setStatus('idle'); setError(''); }}>Try Again</button>
                   </div>
                 )}
               </div>
 
               <div className="csv-format-info">
-                <p>Expected CSV format (headers):</p>
-                <code>Date, Description, Amount</code>
+                <p><strong>Expected Format:</strong></p>
+                <div className="sample-csv glass-panel">
+                  <code>Date,Description,Amount</code><br/>
+                  <code>12-02-2025,Salary,50000</code><br/>
+                  <code>13-02-2025,Swiggy,-350</code>
+                </div>
+                <p className="hint">Amounts should be negative for expenses.</p>
               </div>
             </div>
 
             <div className="modal-footer">
               <button className="modal-btn cancel" onClick={onClose}>Cancel</button>
               <button 
-                className="modal-btn save glass-button" 
+                className={`modal-btn save glass-button ${!file ? 'disabled' : ''}`}
                 onClick={handleUpload} 
-                disabled={!file || status !== 'idle'}
+                disabled={status === 'parsing' || status === 'uploading'}
               >
                 Import CSV
               </button>

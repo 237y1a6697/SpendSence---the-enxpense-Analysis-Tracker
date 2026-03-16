@@ -419,7 +419,9 @@ const HistoryPage = ({ transactions, budget, getIcon, getIconColor }) => (
                         </div>
                         <div className="tx-col-date">{tx.date}</div>
                         <div className="tx-col-status"><span className="badge-success">Completed</span></div>
-                        <div className="tx-col-amount align-right">- {budget.currency}{tx.amount}</div>
+                        <div className="tx-col-amount align-right" style={{ color: tx.type === 'income' ? '#4ade80' : 'var(--text-main)' }}>
+                            {tx.type === 'income' ? '+' : '-'} {budget.currency}{tx.amount}
+                        </div>
                     </div>
                 ))}
             </div>
