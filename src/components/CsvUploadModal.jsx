@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Upload, FileText, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Papa from 'papaparse';
 import { autoCategorize } from '../utils/categorize';
-import { addTransaction } from '../services/db';
+import { addTransactionsBatch } from '../services/db';
 import { useAuth } from '../context/AuthContext';
 import './Modals.css';
 
@@ -212,7 +212,8 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
                 {(status === 'parsing' || status === 'uploading') && (
                   <div className="status-container">
                     <Loader2 className="spinner" size={40} style={{ animation: 'spin 1s linear infinite' }} />
-                    <p style={{ marginTop: '15px' }}>{status === 'parsing' ? 'Analyzing Data...' : `Uploading ${parsedCount} transactions...`}</p>
+                    <p style={{ marginTop: '15px' }}>{status === 'parsing' ? 'Analyzing Data...' : `Uploading ${parsedCount} transactions in bulk...`}</p>
+                    {status === 'uploading' && <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>(This is much faster now!)</p>}
                   </div>
                 )}
 
