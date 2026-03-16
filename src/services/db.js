@@ -8,11 +8,45 @@ import {
   deleteDoc, 
   doc, 
   updateDoc,
-  onSnapshot 
+  onSnapshot,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "./firebase";
 
 const COLLECTION_NAME = "transactions";
+
+/**
+ * Add multiple transactions in batches for performance (e.g. CSV upload)
+ */
+export const addTransactionsBatch = async (userId, transactions) => {
+  if (!db) return Promise.reject("Firestore not initialized");
+  
+  // Firestore batch limit is 500 operations
+  const BATCH_SIZE = 500;
+  const chunks = [];
+  
+  for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
+    chunks.push(transactions.slice(i, i + BATCH_SIZE));
+  }
+
+  try {
+    for (const chunk of chunks) {
+      const batch = writeBatch(db);
+      chunk.forEach(tx => {
+        const docRef = doc(collection(db, COLLECTION_NAME));
+        batch.set(docRef, {
+          ...tx,
+          userId,
+          createdAt: new Date().toISOString()
+        });
+      });
+      await batch.commit();
+    }
+  } catch (error) {
+    console.error("Error committing batch transactions:", error);
+    throw error;
+  }
+};
 
 /**
  * Add a new transaction for a specific user

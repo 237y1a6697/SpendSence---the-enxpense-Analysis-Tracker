@@ -65,14 +65,13 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
       setStatus('uploading');
       setParsedCount(data.length);
 
-      const uploadPromises = data.map((row, index) => {
+      // Prepare transactions for batch upload
+      const transactionsToUpload = data.map((row, index) => {
         const keys = Object.keys(row);
-        console.log(`Processing row ${index}, keys:`, keys);
-        
         const findKey = (possibleNames) => 
             keys.find(k => k && possibleNames.includes(k.trim().toLowerCase()));
 
-        const amountKey = findKey(['amount', 'amt', 'value', 'transaction amount', 'amount (inr)', 'credit/debit']);
+        const amountKey = findKey(['amount', 'amt', 'value', 'transaction amount', 'amount (inr)', 'credit/debit', 'balance']);
         const descKey = findKey(['description', 'desc', 'narration', 'particulars', 'remarks', 'transaction details']);
         const dateKey = findKey(['date', 'transaction date', 'txn date', 'value date']);
 
@@ -84,7 +83,7 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
         const { category, icon } = autoCategorize(description);
         const dateValue = dateKey ? row[dateKey] : new Date().toLocaleDateString('en-IN');
 
-        return addTransaction(currentUser.uid, {
+        return {
           amount: isNaN(amount) ? 0 : Math.abs(amount),
           category,
           description,
@@ -92,10 +91,12 @@ const CsvUploadModal = ({ isOpen, onClose }) => {
           date: dateValue,
           type: amount < 0 ? 'expense' : 'income',
           status: 'Completed'
-        });
+        };
       });
 
-      await Promise.all(uploadPromises);
+      // Use the high-performance batch upload
+      await addTransactionsBatch(currentUser.uid, transactionsToUpload);
+      
       setStatus('success');
       setTimeout(() => {
         onClose();
