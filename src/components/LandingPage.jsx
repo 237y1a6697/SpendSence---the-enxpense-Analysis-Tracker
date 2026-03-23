@@ -72,24 +72,21 @@ const LandingPage = () => {
             {/* Features Grid */}
             <section className="features-grid container">
                 <FeatureCard
-                    icon={<PieChart size={32} color="#ec4899" />}
+                    icon={<PieChart size={32} color="var(--primary)" />}
                     title="Smart Analytics"
                     desc="Visualize your spending patterns with dynamic charts and real-time data analysis."
-                    route="/dashboard/analytics"
                     delay={0.6}
                 />
                 <FeatureCard
-                    icon={<Shield size={32} color="#8b5cf6" />}
+                    icon={<Shield size={32} color="#3b82f6" />}
                     title="Bank-Grade Security"
                     desc="Your financial data is encrypted and protected with industry-leading security standards."
-                    route="/dashboard/settings"
                     delay={0.7}
                 />
                 <FeatureCard
-                    icon={<Cloud size={32} color="#06b6d4" />}
+                    icon={<Cloud size={32} color="#60a5fa" />}
                     title="Cloud Sync"
                     desc="Access your budget from any device. Seamless synchronization across the globe."
-                    route="/dashboard"
                     delay={0.8}
                 />
             </section>
@@ -97,8 +94,7 @@ const LandingPage = () => {
     );
 };
 
-const FeatureCard = ({ icon, title, desc, route, delay }) => {
-    const navigate = useNavigate();
+const FeatureCard = ({ icon, title, desc, delay }) => {
     return (
         <motion.div
             className="feature-card glass-panel"
@@ -106,15 +102,12 @@ const FeatureCard = ({ icon, title, desc, route, delay }) => {
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay, duration: 0.6 }}
             whileHover={{ scale: 1.05 }}
-            onClick={() => navigate(route)}
-            style={{ cursor: 'pointer' }}
         >
             <div className="icon-wrapper glass-panel">
                 {icon}
             </div>
             <h3>{title}</h3>
             <p>{desc}</p>
-            <div className="card-link">Explore <ArrowRight size={14} /></div>
         </motion.div>
     );
 };

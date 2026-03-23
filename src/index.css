@@ -2,37 +2,41 @@
 
 :root {
   --bg-dark: #0f172a;
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  --primary: #ec4899;
-  --primary-glow: #ec489980;
-  --secondary: #8b5cf6;
-  --secondary-glow: #8b5cf680;
-  --accent: #06b6d4;
-  --text-main: #f8fafc;
+  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --primary: #60a5fa;
+  --primary-glow: rgba(96, 165, 250, 0.4);
+  --secondary: #3b82f6;
+  --secondary-glow: rgba(59, 130, 246, 0.4);
+  --accent: #38bdf8;
+  --text-main: #f9fafb;
   --text-muted: #94a3b8;
 
-  --glass-bg: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.1);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-bg: rgba(30, 41, 59, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-highlight: rgba(255, 255, 255, 0.05);
+  --sidebar-bg: #1e293b;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
 
   --font-main: 'Outfit', sans-serif;
 }
 
 /* Light Mode Variables */
 body.light-mode {
-  --bg-dark: #f8fafc;
-  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-  --primary: #ec4899;
-  --secondary: #8b5cf6;
-  --accent: #06b6d4;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
+  --bg-dark: #f9fafb;
+  --bg-gradient: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  --primary: #3b82f6;
+  --secondary: #2563eb;
+  --accent: #0ea5e9;
+  --text-main: #111827;
+  --text-muted: #6b7280;
 
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-border: rgba(0, 0, 0, 0.1);
-  --glass-highlight: rgba(0, 0, 0, 0.05);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-highlight: rgba(255, 255, 255, 0.4);
+  --sidebar-bg: #ffffff;
+  --sidebar-border: rgba(0, 0, 0, 0.05);
+  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -54,8 +58,8 @@ body {
 /* Glassmorphism Utilities */
 .glass-panel {
   background: var(--glass-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   border: 1px solid var(--glass-border);
   box-shadow: var(--card-shadow);
   border-radius: 16px;
@@ -87,14 +91,14 @@ h3 {
 }
 
 .gradient-text {
-  background: linear-gradient(to right, #fff 20%, var(--secondary) 100%);
+  background: linear-gradient(to right, #60a5fa 0%, #3b82f6 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 body.light-mode .gradient-text {
-  background: linear-gradient(to right, var(--primary) 0%, var(--secondary) 100%);
+  background: linear-gradient(to right, #3b82f6 0%, #2563eb 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -129,4 +133,80 @@ body.light-mode .gradient-text {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--glass-highlight);
+}
+
+/* Animation Utilities */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Page Transition Container */
+.page-transition-container {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Badge Styles */
+.badge-plan {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.badge-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Mobile Responsiveness Helper */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 80px !important;
+    }
+    .logo-text, .user-details-mini, .nav-item span {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .desktop-layout {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100% !important;
+        height: auto !important;
+        position: static !important;
+        padding: 10px;
+    }
+    .sidebar-nav {
+        display: flex;
+        overflow-x: auto;
+        gap: 10px;
+    }
+    .nav-item {
+        white-space: nowrap;
+    }
 }

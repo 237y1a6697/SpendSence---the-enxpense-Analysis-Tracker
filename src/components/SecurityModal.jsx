@@ -1,34 +1,60 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Shield, Key, Eye, Lock, Smartphone } from 'lucide-react';
+import { X, Shield, Key, Eye, Lock, Smartphone, Loader2, CheckCircle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../services/firebase';
 import './Modals.css';
 import './SecurityModal.css';
 
 const SecurityModal = ({ isOpen, onClose }) => {
+    const { currentUser } = useAuth();
+    const [statusMsg, setStatusMsg] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handlePasswordReset = async () => {
+        setIsLoading(true);
+        setStatusMsg('');
+        try {
+            await sendPasswordResetEmail(auth, currentUser.email);
+            setStatusMsg('Reset email sent to your inbox!');
+            setTimeout(() => setStatusMsg(''), 5000);
+        } catch (error) {
+            console.error(error);
+            setStatusMsg('Failed to send reset email.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const securityOptions = [
         {
             icon: <Key size={20} />,
             title: 'Change Password',
-            desc: 'Last changed 3 months ago',
-            color: '#8b5cf6'
+            desc: 'Send a secure reset link to your email',
+            color: '#3b82f6',
+            action: handlePasswordReset
         },
         {
             icon: <Smartphone size={20} />,
             title: 'Two-Factor Authentication',
-            desc: 'Enabled via Authenticator App',
-            color: '#10b981'
+            desc: 'Add an extra layer of protection',
+            color: '#3b82f6',
+            action: () => alert('2FA setup is coming soon!')
         },
         {
             icon: <Eye size={20} />,
             title: 'Login Activity',
-            desc: '3 active sessions found',
-            color: '#3b82f6'
+            desc: 'Review your recent active sessions',
+            color: '#3b82f6',
+            action: () => alert('Session logging is enabled')
         },
         {
             icon: <Lock size={20} />,
             title: 'Privacy Settings',
-            desc: 'Manage data sharing preferences',
-            color: '#f43f5e'
+            desc: 'Manage your data sharing preferences',
+            color: '#3b82f6',
+            action: () => alert('Privacy controls are active')
         }
     ];
 
@@ -51,9 +77,9 @@ const SecurityModal = ({ isOpen, onClose }) => {
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="modal-header">
-                            <div className="title-with-icon">
-                                <Shield className="header-icon-main" />
-                                <h3>Privacy & Security</h3>
+                            <div className="title-with-icon" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Shield size={24} color="var(--primary)" />
+                                <h3 style={{ margin: 0 }}>Privacy & Security</h3>
                             </div>
                             <button className="modal-close" onClick={onClose}>
                                 <X size={20} />
@@ -61,30 +87,40 @@ const SecurityModal = ({ isOpen, onClose }) => {
                         </div>
 
                         <div className="modal-body">
-                            <p className="security-intro">Manage your account security and privacy preferences to keep your financial data safe.</p>
+                            <p className="security-intro" style={{ color: 'var(--text-muted)', marginBottom: '20px' }}>Manage your account security and privacy preferences to keep your financial data safe.</p>
 
-                            <div className="security-list">
+                            {statusMsg && (
+                                <div className="status-message" style={{ background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', padding: '12px', borderRadius: '12px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem' }}>
+                                    <CheckCircle size={18} /> {statusMsg}
+                                </div>
+                            )}
+
+                            <div className="security-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {securityOptions.map((opt, i) => (
-                                    <div key={i} className="security-item-card">
-                                        <div className="security-icon-box" style={{ background: `${opt.color}20`, color: opt.color }}>
+                                    <div key={i} className="security-item-card glass-panel" style={{ display: 'flex', alignItems: 'center', padding: '16px', gap: '15px' }}>
+                                        <div className="security-icon-box" style={{ padding: '10px', background: 'rgba(59, 130, 246, 0.1)', color: 'var(--primary)', borderRadius: '12px' }}>
                                             {opt.icon}
                                         </div>
-                                        <div className="security-item-info">
-                                            <h4>{opt.title}</h4>
-                                            <span>{opt.desc}</span>
+                                        <div className="security-item-info" style={{ flex: 1 }}>
+                                            <h4 style={{ margin: 0, fontSize: '1rem' }}>{opt.title}</h4>
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{opt.desc}</span>
                                         </div>
-                                        <button className="security-action-btn">Configure</button>
+                                        <button 
+                                            className="glass-button btn-sm outline" 
+                                            onClick={opt.action}
+                                            disabled={isLoading && opt.title === 'Change Password'}
+                                            style={{ padding: '8px 16px', fontSize: '0.8rem' }}
+                                        >
+                                            {isLoading && opt.title === 'Change Password' ? <Loader2 size={14} className="animate-spin" /> : 'Configure'}
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="modal-footer">
+                        <div className="modal-footer" style={{ marginTop: '20px' }}>
                             <button className="modal-btn cancel" onClick={onClose}>
                                 Close
-                            </button>
-                            <button className="modal-btn save glass-button" onClick={onClose}>
-                                Download Security Audit
                             </button>
                         </div>
                     </motion.div>

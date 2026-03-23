@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword, 
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  updateProfile
 } from 'firebase/auth';
 
 const AuthContext = createContext();
@@ -18,7 +19,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // If auth is not initialized (due to missing config), just set loading false
     if (!auth) {
         setLoading(false);
         return;
@@ -46,6 +46,11 @@ export const AuthProvider = ({ children }) => {
     return signInWithPopup(auth, provider);
   }
 
+  const updateUserProfile = (name) => {
+    if(!auth.currentUser) return Promise.reject("No user logged in");
+    return updateProfile(auth.currentUser, { displayName: name });
+  }
+
   const logout = () => {
     if(!auth) return Promise.reject("Firebase not configured");
     return signOut(auth);
@@ -56,6 +61,7 @@ export const AuthProvider = ({ children }) => {
     login,
     signup,
     loginWithGoogle,
+    updateUserProfile,
     logout
   };
 

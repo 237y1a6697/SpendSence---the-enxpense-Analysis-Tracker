@@ -91,21 +91,23 @@
 }
 
 .orb-1 {
-    width: 400px;
-    height: 400px;
-    background: var(--primary);
-    top: 10%;
-    left: 10%;
-    animation: float 10s ease-in-out infinite;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+    top: -10%;
+    left: -10%;
+    opacity: 0.3;
+    animation: float 15s ease-in-out infinite;
 }
 
 .orb-2 {
-    width: 500px;
-    height: 500px;
-    background: var(--secondary);
-    bottom: 0%;
-    right: 5%;
-    animation: float 14s ease-in-out infinite reverse;
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+    bottom: -20%;
+    right: -10%;
+    opacity: 0.4;
+    animation: float 20s ease-in-out infinite reverse;
 }
 
 @keyframes float {
@@ -135,8 +137,11 @@
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
     height: 100%;
+    transition: all 0.3s ease;
 }
 
 .icon-wrapper {
@@ -158,21 +163,6 @@
     color: var(--text-muted);
     line-height: 1.6;
     flex-grow: 1;
-}
-
-.card-link {
-    color: var(--text-main);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 500;
-    cursor: pointer;
-    opacity: 0.8;
-    transition: opacity 0.3s;
-}
-
-.card-link:hover {
-    opacity: 1;
 }
 
 @media (max-width: 768px) {

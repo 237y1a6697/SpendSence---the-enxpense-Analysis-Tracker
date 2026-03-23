@@ -92,8 +92,14 @@ const Login = () => {
         </div>
 
         <button onClick={handleGoogleLogin} className="google-auth-btn glass-panel" disabled={loading}>
-          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/layout/google.svg" alt="Google" />
-          Continue with Google
+          {loading ? (
+            'Logging in...'
+          ) : (
+            <>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="Google" />
+              Continue with Google
+            </>
+          )}
         </button>
 
         <p className="auth-footer">

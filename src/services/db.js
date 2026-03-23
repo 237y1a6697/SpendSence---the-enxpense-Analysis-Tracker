@@ -18,11 +18,10 @@ const COLLECTION_NAME = "transactions";
 /**
  * Add multiple transactions in batches for performance (e.g. CSV upload)
  */
-export const addTransactionsBatch = async (userId, transactions) => {
+export const addTransactionsBatch = async (userId, transactions, onProgress) => {
   if (!db) return Promise.reject("Firestore not initialized");
   
-  // Firestore batch limit is 500 operations
-  const BATCH_SIZE = 500;
+  const BATCH_SIZE = 100; // Smaller batches for more frequent progress updates during upload
   const chunks = [];
   
   for (let i = 0; i < transactions.length; i += BATCH_SIZE) {
@@ -30,7 +29,10 @@ export const addTransactionsBatch = async (userId, transactions) => {
   }
 
   try {
-    for (const chunk of chunks) {
+    let completedCount = 0;
+    
+    // Execute all batches in parallel
+    const batchPromises = chunks.map(async (chunk) => {
       const batch = writeBatch(db);
       chunk.forEach(tx => {
         const docRef = doc(collection(db, COLLECTION_NAME));
@@ -40,10 +42,17 @@ export const addTransactionsBatch = async (userId, transactions) => {
           createdAt: new Date().toISOString()
         });
       });
+      
       await batch.commit();
-    }
+      
+      // Thread-safe progress reporting: increment outside the async scope or use local accumulation
+      completedCount += chunk.length;
+      if (onProgress) onProgress(completedCount);
+    });
+
+    await Promise.all(batchPromises);
   } catch (error) {
-    console.error("Error committing batch transactions:", error);
+    console.error("Critical Bulk Upload Error:", error);
     throw error;
   }
 };
