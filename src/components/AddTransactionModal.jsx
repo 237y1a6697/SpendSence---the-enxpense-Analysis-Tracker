@@ -30,12 +30,14 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }) => {
 
     const handleSave = () => {
         if (amount && !isNaN(amount)) {
+            const now = new Date();
+            const isoDay = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())).toISOString();
             onSave({
                 category,
                 description: description || 'No Description',
                 amount: parseFloat(amount),
                 icon,
-                date: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+                date: isoDay,
                 type: 'expense',
                 status: 'Completed'
             });

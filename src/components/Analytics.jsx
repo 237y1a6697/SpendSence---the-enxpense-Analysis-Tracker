@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { ShoppingBag, TrendingUp, PieChart as PieChartIcon, Loader2, Download, CheckCircle } from 'lucide-react';
+import { ShoppingBag, TrendingUp, PieChart as PieChartIcon, Loader2, Download, CheckCircle, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { subscribeToTransactions } from '../services/db';
+import { getMockTransactions } from '../utils/mockData';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import './Analytics.css';
 
 const Analytics = () => {
@@ -12,6 +15,7 @@ const Analytics = () => {
     const [loading, setLoading] = useState(true);
     const [isExporting, setIsExporting] = useState(false);
     const [exportSuccess, setExportSuccess] = useState(false);
+    const [showExportMenu, setShowExportMenu] = useState(false);
     const [selectedPeriod, setSelectedPeriod] = useState('Month'); // Week, Month, Year
 
     useEffect(() => {
@@ -23,11 +27,19 @@ const Analytics = () => {
         return () => unsubscribe();
     }, [currentUser]);
 
+    const allTransactions = React.useMemo(() => {
+        if (!transactions || transactions.length < 5) {
+            const mocks = getMockTransactions();
+            return [...(transactions || []), ...mocks].sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+        return transactions;
+    }, [transactions]);
+
     // Data Filtering based on period
     const filteredTransactions = React.useMemo(() => {
-        if (!transactions) return [];
+        if (!allTransactions) return [];
         const now = new Date();
-        return transactions.filter(tx => {
+        return allTransactions.filter(tx => {
             const txDate = new Date(tx.date);
             if (selectedPeriod === 'Week') {
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -40,7 +52,7 @@ const Analytics = () => {
             }
             return true;
         });
-    }, [transactions, selectedPeriod]);
+    }, [allTransactions, selectedPeriod]);
 
     // Export Logic
     const handleExportCSV = () => {
@@ -69,6 +81,38 @@ const Analytics = () => {
             setTimeout(() => setExportSuccess(false), 3000);
         } catch (error) {
             console.error("Export failed:", error);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        try {
+            const element = document.querySelector('.page-content');
+            const canvas = await html2canvas(element, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: document.body.classList.contains('light-mode') ? '#f8fafc' : '#0f172a',
+                logging: false,
+                onclone: (clonedDoc) => {
+                    const hideElements = clonedDoc.querySelectorAll('.glass-button, .period-selector');
+                    hideElements.forEach(el => el.style.display = 'none');
+                }
+            });
+
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 210;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+            pdf.save(`SpendSense_Report_${selectedPeriod}_${new Date().toISOString().split('T')[0]}.pdf`);
+            
+            setExportSuccess(true);
+            setTimeout(() => setExportSuccess(false), 3000);
+        } catch (error) {
+            console.error("PDF Export failed:", error);
         } finally {
             setIsExporting(false);
         }
@@ -134,7 +178,7 @@ const Analytics = () => {
             topCategory: topCat,
             avgSpend: avgSpendVal
         };
-    }, [transactions]);
+    }, [allTransactions, filteredTransactions]);
 
     if (loading) return (
         <div className="center-flex" style={{ height: '70vh' }}>
@@ -177,16 +221,49 @@ const Analytics = () => {
                     ))}
                 </div>
 
-                <button 
-                    className="glass-button btn-sm outline" 
-                    onClick={handleExportCSV} 
-                    disabled={isExporting} 
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '130px', height: 'fit-content' }}
-                >
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : 
-                     exportSuccess ? <CheckCircle size={16} color="#10b981" /> : 
-                     <><Download size={16} /> Export CSV</>}
-                </button>
+                <div style={{ position: 'relative' }}>
+                    <button 
+                        className="glass-button btn-sm outline" 
+                        onClick={() => setShowExportMenu(!showExportMenu)} 
+                        disabled={isExporting} 
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '130px', height: 'fit-content', justifyContent: 'space-between' }}
+                    >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {isExporting ? <Loader2 size={16} className="animate-spin" /> : 
+                             exportSuccess ? <CheckCircle size={16} color="#10b981" /> : 
+                             <Download size={16} />}
+                             Export
+                        </div>
+                        <ChevronDown size={16} style={{ transform: showExportMenu ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
+                    </button>
+
+                    {showExportMenu && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                            className="glass-panel" 
+                            style={{ 
+                                position: 'absolute', 
+                                top: '100%', 
+                                right: 0, 
+                                marginTop: '8px', 
+                                padding: '8px', 
+                                borderRadius: '12px', 
+                                zIndex: 50,
+                                minWidth: '160px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                            }}
+                        >
+                            <button className="glass-button btn-sm outline" style={{ border: 'none', justifyContent: 'flex-start', padding: '8px 12px' }} onClick={() => { setShowExportMenu(false); handleExportCSV(); }}>
+                                📄 Export as CSV
+                            </button>
+                            <button className="glass-button btn-sm outline" style={{ border: 'none', justifyContent: 'flex-start', padding: '8px 12px' }} onClick={() => { setShowExportMenu(false); handleExportPDF(); }}>
+                                📑 Export as PDF
+                            </button>
+                        </motion.div>
+                    )}
+                </div>
             </div>
 
             {/* Insights Cards */}
@@ -219,7 +296,7 @@ const Analytics = () => {
                     </div>
                     <div className="insight-details">
                         <span className="insight-label">Total Transactions</span>
-                        <h3 className="insight-value">{transactions.length}</h3>
+                        <h3 className="insight-value">{allTransactions.length}</h3>
                         <span className="insight-trend">Real-time data</span>
                     </div>
                 </motion.div>

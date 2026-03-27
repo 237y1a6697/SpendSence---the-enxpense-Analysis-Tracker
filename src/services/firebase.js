@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 
 // Firebase Project Configuration provided by the user
@@ -17,6 +17,9 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+// Use long polling to help bypass strict network configurations/adblockers silently
+const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+});
 
 export { auth, db };

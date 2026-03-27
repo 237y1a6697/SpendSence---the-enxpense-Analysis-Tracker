@@ -1,12 +1,18 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+
+const formatTransactionDate = (value) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value || '-';
+    return parsed.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+};
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell } from 'recharts';
 import StatCard from './StatCard';
 
 const DashboardContent = ({
     budget, transactions, percentage, pieData, trendData,
     selectedPeriod, onPeriodChange, getIcon, getIconColor,
-    onViewAll, onTxClick
+    onViewAll, onTxClick, onViewAnalytics
 }) => (
     <motion.div 
         className="content-grid"
@@ -24,7 +30,10 @@ const DashboardContent = ({
         <div className="charts-row">
             <motion.div className="chart-card glass-panel wide" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
                 <div className="card-header">
-                    <h3>Spending Trend</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={onViewAnalytics}>
+                        <h3>Spending Trend</h3>
+                        <span style={{ fontSize: '0.8rem', color: '#60a5fa', textDecoration: 'underline' }}>View Analytics</span>
+                    </div>
                     <select
                         className="period-select"
                         value={selectedPeriod}
@@ -110,7 +119,7 @@ const DashboardContent = ({
                                 <div className="tx-icon-sm" style={{ backgroundColor: getIconColor(tx.icon) }}>{getIcon(tx.icon)}</div>
                                 <span>{tx.category}</span>
                             </div>
-                            <div className="tx-col-date">{tx.date?.split(',')[0]}</div>
+                            <div className="tx-col-date">{formatTransactionDate(tx.date)}</div>
                             <div className="tx-col-status"><span className="badge-success">Completed</span></div>
                             <div className="tx-col-amount align-right">- {budget.currency}{tx.amount?.toLocaleString()}</div>
                         </motion.div>
