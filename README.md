@@ -1,4 +1,4 @@
-<img width="1908" height="875" alt="image" src="https://github.com/user-attachments/assets/72f585ed-c953-4168-8a9c-71c18bccaa43" /># 💸 SpendSense — Smart Expense Analysis Tracker
+# 💸 SpendSense — Smart Expense Analysis Tracker
 
 > A modern personal finance web app that helps users track, analyze, and understand their spending with interactive dashboards and AI-powered insights.
 
